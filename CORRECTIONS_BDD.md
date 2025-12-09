@@ -106,3 +106,88 @@ Si vous souhaitez aller plus loin :
 ---
 
 ✅ **Résultat** : Les enregistrements sont maintenant correctement sauvegardés dans la base de données MySQL et persistent après rechargement !
+
+---
+
+# Correction - Erreur Prisma P2025 lors de la suppression (09/12/2025)
+
+## Problème identifié 🔍
+
+Erreur en production lors de la suppression d'une équipe :
+```
+Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.equipe.delete()` invocation:
+
+An operation failed because it depends on one or more records that were required but not found. 
+Record to delete does not exist.
+code: 'P2025'
+```
+
+## Cause du problème
+
+Cette erreur Prisma P2025 survient lorsqu'on tente de supprimer un enregistrement qui n'existe pas. Cela peut arriver dans plusieurs scénarios :
+- **Double-clic rapide** sur le bouton de suppression (l'utilisateur supprime deux fois la même ressource)
+- L'enregistrement a **déjà été supprimé** par un autre utilisateur/session
+- L'**ID est invalide** ou corrompu
+
+Le code original ne vérifiait pas si l'enregistrement existait avant d'appeler `prisma.delete()`.
+
+## Solution apportée ✅
+
+### Pattern appliqué à toutes les APIs
+
+1. **Vérification préalable** : Avant toute suppression/mise à jour, on vérifie que l'enregistrement existe avec `findUnique()`
+2. **Retour 404** : Si l'enregistrement n'existe pas, on retourne une erreur 404 claire
+3. **Gestion du code P2025** : En cas d'erreur P2025 dans le catch (race condition), on retourne aussi une 404
+
+### Fichiers modifiés 📝
+
+#### 1. `sigap/app/api/equipes/route.ts`
+```typescript
+// Vérifier si l'équipe existe avant de la supprimer
+const equipeExistante = await prisma.equipe.findUnique({
+  where: { id: equipeId },
+})
+
+if (!equipeExistante) {
+  return NextResponse.json(
+    { error: 'Équipe non trouvée ou déjà supprimée' },
+    { status: 404 }
+  )
+}
+```
+
+#### 2. `sigap/app/api/localites/route.ts`
+- Même pattern appliqué pour la fonction DELETE
+
+#### 3. `sigap/app/api/produits/route.ts`
+- Même pattern appliqué pour la fonction DELETE
+
+#### 4. `sigap/app/api/plannings/route.ts`
+- Même pattern appliqué pour la fonction DELETE
+
+#### 5. `sigap/app/api/besoins-jours/route.ts`
+- Pattern appliqué pour la fonction PUT (soumission des besoins)
+
+## Avantages de cette solution 🎯
+
+1. **Meilleure expérience utilisateur** : Message d'erreur clair au lieu d'une erreur 500
+2. **Robustesse** : L'application gère les cas de double-clic ou suppressions concurrentes
+3. **Conformité REST** : Utilisation correcte du code HTTP 404 pour les ressources non trouvées
+4. **Logs propres** : Plus d'erreurs P2025 dans les logs de production
+
+## Déploiement 🚀
+
+Après cette correction, redéployer l'application sur le serveur de production :
+
+```bash
+# Reconstruire l'application
+npm run build
+
+# Redémarrer avec PM2
+pm2 restart appro
+```
+
+---
+
+✅ **Résultat** : Les erreurs P2025 sont maintenant gérées proprement et l'utilisateur reçoit un message clair si l'enregistrement n'existe plus.

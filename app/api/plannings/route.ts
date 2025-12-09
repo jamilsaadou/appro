@@ -140,13 +140,36 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
+    const planningId = parseInt(id)
+
+    // Vérifier si le planning existe avant de le supprimer
+    const planningExistant = await prisma.planningHebdomadaire.findUnique({
+      where: { id: planningId },
+    })
+
+    if (!planningExistant) {
+      return NextResponse.json(
+        { error: 'Planning non trouvé ou déjà supprimé' },
+        { status: 404 }
+      )
+    }
+
     await prisma.planningHebdomadaire.delete({
-      where: { id: parseInt(id) },
+      where: { id: planningId },
     })
 
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erreur lors de la suppression du planning:', error)
+    
+    // Gérer spécifiquement l'erreur P2025 (enregistrement non trouvé)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return NextResponse.json(
+        { error: 'Planning non trouvé ou déjà supprimé' },
+        { status: 404 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Erreur lors de la suppression du planning' },
       { status: 500 }

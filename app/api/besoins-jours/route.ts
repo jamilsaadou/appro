@@ -131,10 +131,29 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    const parsedEquipeId = parseInt(equipeId)
+
+    // Vérifier si le besoin existe avant de le mettre à jour
+    const besoinExistant = await prisma.besoinsJour.findUnique({
+      where: {
+        equipeId_dateKey: {
+          equipeId: parsedEquipeId,
+          dateKey,
+        },
+      },
+    })
+
+    if (!besoinExistant) {
+      return NextResponse.json(
+        { error: 'Besoin journalier non trouvé' },
+        { status: 404 }
+      )
+    }
+
     const besoin = await prisma.besoinsJour.update({
       where: {
         equipeId_dateKey: {
-          equipeId: parseInt(equipeId),
+          equipeId: parsedEquipeId,
           dateKey,
         },
       },
@@ -148,8 +167,17 @@ export async function PUT(request: NextRequest) {
     })
 
     return NextResponse.json(besoin)
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erreur lors de la soumission du besoin:', error)
+    
+    // Gérer spécifiquement l'erreur P2025 (enregistrement non trouvé)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return NextResponse.json(
+        { error: 'Besoin journalier non trouvé' },
+        { status: 404 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Erreur lors de la soumission du besoin' },
       { status: 500 }

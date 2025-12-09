@@ -103,13 +103,36 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
+    const produitId = parseInt(id)
+
+    // Vérifier si le produit existe avant de le supprimer
+    const produitExistant = await prisma.produit.findUnique({
+      where: { id: produitId },
+    })
+
+    if (!produitExistant) {
+      return NextResponse.json(
+        { error: 'Produit non trouvé ou déjà supprimé' },
+        { status: 404 }
+      )
+    }
+
     await prisma.produit.delete({
-      where: { id: parseInt(id) },
+      where: { id: produitId },
     })
 
     return NextResponse.json({ message: 'Produit supprimé avec succès' })
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erreur lors de la suppression du produit:', error)
+    
+    // Gérer spécifiquement l'erreur P2025 (enregistrement non trouvé)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return NextResponse.json(
+        { error: 'Produit non trouvé ou déjà supprimé' },
+        { status: 404 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Erreur lors de la suppression du produit' },
       { status: 500 }

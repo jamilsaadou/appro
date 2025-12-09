@@ -101,13 +101,36 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
+    const localiteId = parseInt(id)
+
+    // Vérifier si la localité existe avant de la supprimer
+    const localiteExistante = await prisma.localite.findUnique({
+      where: { id: localiteId },
+    })
+
+    if (!localiteExistante) {
+      return NextResponse.json(
+        { error: 'Localité non trouvée ou déjà supprimée' },
+        { status: 404 }
+      )
+    }
+
     await prisma.localite.delete({
-      where: { id: parseInt(id) },
+      where: { id: localiteId },
     })
 
     return NextResponse.json({ message: 'Localité supprimée avec succès' })
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erreur lors de la suppression de la localité:', error)
+    
+    // Gérer spécifiquement l'erreur P2025 (enregistrement non trouvé)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return NextResponse.json(
+        { error: 'Localité non trouvée ou déjà supprimée' },
+        { status: 404 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Erreur lors de la suppression de la localité' },
       { status: 500 }

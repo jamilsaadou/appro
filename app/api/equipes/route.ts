@@ -107,13 +107,36 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
+    const equipeId = parseInt(id)
+
+    // Vérifier si l'équipe existe avant de la supprimer
+    const equipeExistante = await prisma.equipe.findUnique({
+      where: { id: equipeId },
+    })
+
+    if (!equipeExistante) {
+      return NextResponse.json(
+        { error: 'Équipe non trouvée ou déjà supprimée' },
+        { status: 404 }
+      )
+    }
+
     await prisma.equipe.delete({
-      where: { id: parseInt(id) },
+      where: { id: equipeId },
     })
 
     return NextResponse.json({ message: 'Équipe supprimée avec succès' })
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erreur lors de la suppression de l\'équipe:', error)
+    
+    // Gérer spécifiquement l'erreur P2025 (enregistrement non trouvé)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return NextResponse.json(
+        { error: 'Équipe non trouvée ou déjà supprimée' },
+        { status: 404 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Erreur lors de la suppression de l\'équipe' },
       { status: 500 }
