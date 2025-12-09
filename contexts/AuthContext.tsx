@@ -1,16 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Localite, Equipe, Produit, PlanningHebdomadaire, PRODUITS_DEFAUT, BesoinsJour, DemandeModification, StatutDemande, PROVISIONS_CONFIG } from '@/types';
-import { 
-  SEED_USERS, 
-  SEED_LOCALITES, 
-  SEED_EQUIPES, 
-  SEED_PRODUITS_SUPPLEMENTAIRES, 
-  SEED_PLANNINGS, 
-  SEED_BESOINS_JOURNALIERS, 
-  SEED_DEMANDES 
-} from '@/data/seed-data';
+import { User, Localite, Equipe, Produit, PlanningHebdomadaire, BesoinsJour, DemandeModification, StatutDemande, PROVISIONS_CONFIG } from '@/types';
 
 interface AuthContextType {
   user: User | null;
@@ -87,14 +78,14 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
     setIsLoading(false);
   }, []);
 
-  // Data state avec données initiales depuis seed-data
-  const [localites, setLocalites] = useState<Localite[]>(SEED_LOCALITES);
-  const [equipes, setEquipes] = useState<Equipe[]>(SEED_EQUIPES);
-  const [produits, setProduits] = useState<Produit[]>([...PRODUITS_DEFAUT, ...SEED_PRODUITS_SUPPLEMENTAIRES]);
-  const [utilisateurs, setUtilisateurs] = useState<User[]>(SEED_USERS);
-  const [plannings, setPlannings] = useState<PlanningHebdomadaire[]>(SEED_PLANNINGS);
-  const [besoinsJournaliers, setBesoinsJournaliers] = useState<BesoinsJour[]>(SEED_BESOINS_JOURNALIERS);
-  const [demandesModification, setDemandesModification] = useState<DemandeModification[]>(SEED_DEMANDES);
+  // Data state - Tableaux vides, tout vient de la base de données
+  const [localites, setLocalites] = useState<Localite[]>([]);
+  const [equipes, setEquipes] = useState<Equipe[]>([]);
+  const [produits, setProduits] = useState<Produit[]>([]);
+  const [utilisateurs, setUtilisateurs] = useState<User[]>([]);
+  const [plannings, setPlannings] = useState<PlanningHebdomadaire[]>([]);
+  const [besoinsJournaliers, setBesoinsJournaliers] = useState<BesoinsJour[]>([]);
+  const [demandesModification, setDemandesModification] = useState<DemandeModification[]>([]);
 
   const isAdmin = user?.role === 'admin';
 
@@ -106,45 +97,35 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
         const localitesRes = await fetch('/api/localites');
         if (localitesRes.ok) {
           const localitesData = await localitesRes.json();
-          if (localitesData.length > 0) {
-            setLocalites(localitesData);
-          }
+          setLocalites(localitesData);
         }
 
         // Charger les équipes
         const equipesRes = await fetch('/api/equipes');
         if (equipesRes.ok) {
           const equipesData = await equipesRes.json();
-          if (equipesData.length > 0) {
-            setEquipes(equipesData);
-          }
+          setEquipes(equipesData);
         }
 
         // Charger les produits
         const produitsRes = await fetch('/api/produits');
         if (produitsRes.ok) {
           const produitsData = await produitsRes.json();
-          if (produitsData.length > 0) {
-            setProduits(produitsData);
-          }
+          setProduits(produitsData);
         }
 
         // Charger les plannings hebdomadaires
         const planningsRes = await fetch('/api/plannings');
         if (planningsRes.ok) {
           const planningsData = await planningsRes.json();
-          if (planningsData.length > 0) {
-            setPlannings(planningsData);
-          }
+          setPlannings(planningsData);
         }
 
         // Charger les besoins journaliers
         const besoinsRes = await fetch('/api/besoins-jours');
         if (besoinsRes.ok) {
           const besoinsData = await besoinsRes.json();
-          if (besoinsData.length > 0) {
-            setBesoinsJournaliers(besoinsData);
-          }
+          setBesoinsJournaliers(besoinsData);
         }
       } catch (error) {
         console.error('Erreur lors du chargement des données:', error);
