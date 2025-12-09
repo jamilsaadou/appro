@@ -1,0 +1,123 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  nom       String
+  email     String   @unique
+  password  String
+  role      String   // 'admin' ou 'responsable'
+  equipeId  Int?
+  equipe    Equipe?  @relation(fields: [equipeId], references: [id])
+  demandes  DemandeModification[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Localite {
+  id          Int      @id @default(autoincrement())
+  nom         String
+  region      String
+  description String   @db.Text
+  equipes     Equipe[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("localites")
+}
+
+model Equipe {
+  id                   Int                   @id @default(autoincrement())
+  localiteId           Int
+  localite             Localite              @relation(fields: [localiteId], references: [id])
+  nom                  String
+  effectif             Int
+  responsable          String
+  users                User[]
+  planningsHebdo       PlanningHebdomadaire[]
+  besoinsJours         BesoinsJour[]
+  demandes             DemandeModification[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  @@map("equipes")
+}
+
+model Produit {
+  id                Int      @id @default(autoincrement())
+  nom               String
+  unite             String
+  rationParPersonne Float
+  taille            Float
+  typeCondit        String
+  prixUnitaire      Float
+  categorie         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("produits")
+}
+
+model PlanningHebdomadaire {
+  id        Int      @id @default(autoincrement())
+  equipeId  Int
+  equipe    Equipe   @relation(fields: [equipeId], references: [id])
+  mois      String   // Format YYYY-MM
+  jours     Json     // Stockage JSON du planning par jour et par repas
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([equipeId, mois])
+  @@map("plannings_hebdomadaires")
+}
+
+model BesoinsJour {
+  id              Int      @id @default(autoincrement())
+  equipeId        Int
+  equipe          Equipe   @relation(fields: [equipeId], references: [id])
+  dateKey         String   // Format YYYY-MM-DD
+  effectifJour    Int
+  repas           Json     // Stockage JSON des besoins par repas
+  soumis          Boolean  @default(false)
+  dateSubmission  DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([equipeId, dateKey])
+  @@index([dateKey])
+  @@map("besoins_jours")
+}
+
+model DemandeModification {
+  id               Int       @id @default(autoincrement())
+  equipeId         Int
+  equipe           Equipe    @relation(fields: [equipeId], references: [id])
+  responsableId    Int
+  responsable      User      @relation(fields: [responsableId], references: [id])
+  responsableNom   String
+  mois             String    // Format YYYY-MM
+  motif            String    @db.Text
+  dateKey          String?   // Si modification d'un jour spécifique
+  nouvelEffectif   Int?      // Si modification d'effectif
+  statut           String    @default("en_attente") // 'en_attente', 'approuvee', 'rejetee'
+  dateCreation     DateTime  @default(now())
+  dateTraitement   DateTime?
+  commentaireAdmin String?   @db.Text
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([statut])
+  @@index([equipeId])
+  @@map("demandes_modifications")
+}
